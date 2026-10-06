@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>filecmd — Organizador de Comandos</title>
+  <meta name="description" content="Referência interativa de comandos de terminal."/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23080b10'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%2300e5a0'>⌘</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#07090e;--surface:#0c0f17;--surface2:#111520;--border:#161d2c;--border2:#1e2840;--text:#c8d4e8;--muted:#475569;--green:#00e5a0;--blue:#38bdf8;--orange:#fb923c;--pink:#f472b6;--purple:#a78bfa;--yellow:#fbbf24;--red:#f87171;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#1e2a3a;border-radius:4px;}
+    /* AUTH */
+    #auth-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;}
+    .auth-bg-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,160,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,0.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;}
+    .auth-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.07) 0%,transparent 70%);pointer-events:none;}
+    .auth-card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:32px 28px;position:relative;z-index:1;box-shadow:0 24px 60px rgba(0,0,0,0.6);animation:authIn 0.4s ease;}
+    @keyframes authIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .auth-logo{text-align:center;margin-bottom:28px;}
+    .auth-logo-icon{width:52px;height:52px;border-radius:14px;margin:0 auto 12px;background:linear-gradient(135deg,#00e5a0,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:24px;color:#000;font-weight:700;}
+    .auth-logo-name{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+    .auth-logo-name span{color:var(--green);}
+    .auth-logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:3px;}
+    .auth-label{font-size:11px;color:var(--muted);margin-bottom:14px;}
+    .auth-field{position:relative;margin-bottom:10px;}
+    .auth-field-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+    .auth-input{width:100%;padding:11px 12px 11px 36px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color 0.2s;}
+    .auth-input:focus{border-color:var(--green);}
+    .auth-input::placeholder{color:#2a3a50;}
+    .auth-error{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:8px 12px;color:var(--red);font-size:10px;margin-bottom:10px;display:none;}
+    .auth-error.show{display:block;}
+    .auth-btn{width:100%;padding:12px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--green),var(--blue));color:#000;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all 0.2s;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .auth-btn:hover{opacity:0.9;transform:translateY(-1px);}
+    .auth-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;transform:none;}
+    @keyframes checkPop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* APP */
+    #app{display:none;}
+    #app.visible{display:block;}
+    .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(56,189,248,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,0.025) 1px,transparent 1px);background-size:48px 48px;}
+    .bg-glow{position:fixed;z-index:0;pointer-events:none;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,0.06) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);}
+    /* NAVBAR */
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;height:54px;display:flex;align-items:center;gap:12px;padding:0 28px;background:rgba(7,9,14,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+    .nav-logo{font-family:'Syne',sans-serif;font-weight:900;font-size:17px;color:#fff;letter-spacing:-0.5px;text-decoration:none;}
+    .nav-logo-dot{color:var(--green);}
+    .nav-pill{font-size:9px;letter-spacing:1.5px;color:var(--green);background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);padding:2px 8px;border-radius:20px;}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+    .user-avatar-btn{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:5px 10px;cursor:pointer;transition:all 0.15s;}
+    .user-avatar-btn:hover{border-color:var(--green);}
+    .avatar-circle{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#000;flex-shrink:0;}
+    .avatar-name{font-size:10px;color:var(--text);}
+    .avatar-caret{font-size:8px;color:var(--muted);}
+    .user-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:6px;min-width:200px;z-index:200;box-shadow:0 16px 48px rgba(0,0,0,0.6);animation:dropIn 0.15s ease;}
+    @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .user-dropdown-header{padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+    .user-dropdown-name{font-size:12px;color:#fff;font-weight:500;}
+    .user-dropdown-email{font-size:9px;color:var(--muted);margin-top:2px;}
+    .dropdown-item{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.12s;text-align:left;}
+    .dropdown-item:hover{background:var(--surface2);color:var(--text);}
+    .dropdown-item.danger{color:var(--red);}
+    .dropdown-item.danger:hover{background:rgba(248,113,113,0.1);}
+    .dropdown-divider{height:1px;background:var(--border);margin:4px 0;}
+    /* HERO */
+    .hero{position:relative;z-index:1;padding:100px 28px 40px;text-align:center;max-width:860px;margin:0 auto;}
+    .hero-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(0,229,160,0.07);border:1px solid rgba(0,229,160,0.18);color:var(--green);font-size:9px;letter-spacing:2.5px;padding:5px 14px;border-radius:20px;margin-bottom:18px;}
+    .hero-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+    .hero h1{font-family:'Syne',sans-serif;font-weight:900;font-size:clamp(16px,2.8vw,32px);color:#fff;line-height:1.1;letter-spacing:-1px;margin-bottom:12px;}
+    .hero h1 em{font-style:normal;color:var(--green);}
+    .hero p{color:var(--muted);font-size:12px;line-height:1.9;max-width:480px;margin:0 auto 24px;}
+    .search-wrap{max-width:460px;margin:0 auto;}
+    .search-box{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;transition:border-color 0.2s,box-shadow 0.2s;}
+    .search-box:focus-within{border-color:rgba(0,229,160,0.5);box-shadow:0 0 0 3px rgba(0,229,160,0.08);}
+    .search-box input{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:inherit;font-size:12px;}
+    .search-box input::placeholder{color:var(--muted);}
+    .search-count{font-size:9px;color:var(--muted);white-space:nowrap;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:10px;}
+    /* STATS */
+    .stats{position:relative;z-index:1;display:flex;justify-content:center;max-width:640px;margin:0 auto 28px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    .stat{flex:1;padding:14px 16px;text-align:center;border-right:1px solid var(--border);}
+    .stat:last-child{border-right:none;}
+    .stat-n{font-family:'Syne',sans-serif;font-weight:900;font-size:22px;color:#fff;}
+    .stat-l{font-size:8px;color:var(--muted);letter-spacing:1.5px;margin-top:2px;}
+    /* TABS */
+    .tabs{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:5px;justify-content:center;padding:0 28px;margin-bottom:28px;}
+    .tab{padding:6px 14px;border-radius:20px;font-family:inherit;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);cursor:pointer;transition:all 0.15s;background:none;color:var(--muted);}
+    .tab:hover{color:var(--text);border-color:var(--border2);}
+    /* GRID & CARDS */
+    .grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;padding:0 28px 100px;max-width:1360px;margin:0 auto;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s;cursor:pointer;position:relative;}
+    .card:hover{border-color:var(--cc,var(--green));transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.35);}
+    .card-head{display:flex;align-items:center;gap:10px;padding:13px 15px 10px;border-bottom:1px solid var(--border);}
+    .card-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
+    .card-title{font-size:13px;color:#fff;font-weight:500;}
+    .card-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+    .card-badge{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:8px;white-space:nowrap;}
+    .card-fav{position:absolute;top:8px;right:8px;background:none;border:none;font-size:14px;cursor:pointer;opacity:0;transition:opacity 0.15s,color 0.15s;color:var(--muted);padding:3px 5px;border-radius:4px;z-index:2;line-height:1;}
+    .card:hover .card-fav{opacity:1;}
+    .card-fav.active{opacity:1!important;color:var(--yellow);}
+    .card-body{padding:10px 14px;}
+    .cmd-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.025);}
+    .cmd-row:last-child{border-bottom:none;}
+    .cmd-name{font-size:10px;min-width:108px;flex-shrink:0;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.04);color:var(--cc,var(--green));font-weight:500;}
+    .cmd-desc{font-size:10px;color:var(--muted);flex:1;line-height:1.4;}
+    .cmd-copy{opacity:0;background:none;border:none;font-family:inherit;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:3px;transition:all 0.12s;flex-shrink:0;}
+    .cmd-row:hover .cmd-copy{opacity:1;}
+    .cmd-copy:hover{color:var(--cc);}
+    .cmd-copy.ok{opacity:1;color:var(--green);}
+    /* MODAL */
+    .overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.22s;}
+    .overlay.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;transform:scale(0.96) translateY(16px);transition:transform 0.22s;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
+    .overlay.open .modal{transform:scale(1) translateY(0);}
+    .modal-head{display:flex;align-items:center;gap:12px;padding:18px 22px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;}
+    .modal-icon-wrap{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;}
+    .modal-sub{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5;}
+    .modal-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
+    .modal-fav-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;color:var(--muted);transition:all 0.15s;font-family:inherit;}
+    .modal-fav-btn:hover{border-color:var(--yellow);color:var(--yellow);}
+    .modal-fav-btn.active{background:rgba(251,191,36,0.1);border-color:var(--yellow);color:var(--yellow);}
+    .modal-x{width:28px;height:28px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+    .modal-x:hover{color:#fff;}
+    .modal-body{padding:18px 22px;}
+    .msec-title{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+    .msec{margin-bottom:18px;}
+    .usage-box{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:10px;}
+    .usage-box code{color:var(--cc);font-size:12px;flex:1;font-family:inherit;}
+    .usage-copy{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;color:var(--muted);font-size:9px;cursor:pointer;font-family:inherit;transition:all 0.12s;flex-shrink:0;}
+    .usage-copy:hover{color:var(--cc);}
+    .flags-table{background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .flag-row{display:flex;align-items:center;gap:12px;padding:8px 13px;border-bottom:1px solid rgba(255,255,255,0.03);}
+    .flag-row:last-child{border-bottom:none;}
+    .flag-k{font-size:10px;padding:2px 7px;border-radius:4px;background:rgba(251,191,36,0.1);color:var(--yellow);min-width:88px;font-weight:500;}
+    .flag-v{font-size:10px;color:var(--muted);}
+    .ex-list{display:flex;flex-direction:column;gap:5px;}
+    .ex-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:8px;background:var(--bg);border:1px solid var(--border);cursor:pointer;transition:border-color 0.15s;}
+    .ex-row:hover{border-color:var(--cc);}
+    .ex-dollar{color:var(--muted);font-size:11px;flex-shrink:0;}
+    .ex-row code{font-size:11px;color:var(--text);flex:1;font-family:inherit;line-height:1.4;}
+    .ex-cp{font-size:10px;color:var(--muted);flex-shrink:0;transition:color 0.12s;}
+    .ex-row:hover .ex-cp{color:var(--cc);}
+    /* PANELS */
+    .panel-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeOv 0.2s ease;}
+    @keyframes fadeOv{from{opacity:0}to{opacity:1}}
+    .panel-box{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.7);animation:panelIn 0.25s ease;}
+    .panel-box.wide{max-width:820px;}
+    @keyframes panelIn{from{opacity:0;transform:scale(0.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .panel-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1;}
+    .panel-icon{font-size:20px;}
+    .panel-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;}
+    .panel-sub{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:1px;}
+    .panel-close{margin-left:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:13px;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+    .panel-close:hover{color:#fff;}
+    .panel-body{padding:22px;}
+    .panel-section{margin-bottom:24px;}
+    .panel-section-title{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+    /* Profile */
+    .profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#000;margin:0 auto 16px;}
+    .profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px;}
+    .pstat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;}
+    .pstat-n{font-family:'Syne',sans-serif;font-size:20px;font-weight:900;}
+    .pstat-l{font-size:8px;color:var(--muted);margin-top:3px;letter-spacing:1px;}
+    .info-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .info-row:last-child{border-bottom:none;}
+    .info-label{font-size:9px;color:var(--muted);min-width:120px;letter-spacing:0.5px;}
+    .info-value{font-size:11px;color:var(--text);}
+    /* Settings */
+    .setting-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .setting-row:last-child{border-bottom:none;}
+    .setting-info{flex:1;}
+    .setting-label{font-size:11px;color:var(--text);}
+    .setting-desc{font-size:9px;color:var(--muted);margin-top:3px;}
+    .toggle{width:36px;height:20px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2);cursor:pointer;position:relative;transition:all 0.2s;flex-shrink:0;}
+    .toggle.on{background:var(--green);border-color:var(--green);}
+    .toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+    .toggle.on::after{transform:translateX(16px);}
+    .setting-select{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:10px;padding:5px 10px;font-family:inherit;cursor:pointer;outline:none;}
+    .accent-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .accent-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+    .accent-dot.sel{border-color:#fff;transform:scale(1.2);}
+    /* History & Favs */
+    .hist-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;}
+    .hist-code{font-size:11px;color:var(--text);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+    .hist-time{font-size:9px;color:var(--muted);white-space:nowrap;}
+    .hist-copy-btn{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 6px;font-family:inherit;transition:color 0.12s;}
+    .hist-copy-btn:hover{color:var(--green);}
+    .fav-card{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+    .fav-card:hover{border-color:var(--yellow);}
+    .fav-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+    .fav-rm{margin-left:auto;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:4px;font-family:inherit;transition:color 0.15s;}
+    .fav-rm:hover{color:var(--red);}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:12px;}
+    .empty-state-icon{font-size:32px;margin-bottom:12px;opacity:0.4;}
+    /* Share bar */
+    .share-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 24px;background:rgba(7,9,14,0.92);backdrop-filter:blur(16px);border-top:1px solid var(--border);}
+    .share-bar span{font-size:11px;color:var(--muted);}
+    .share-bar strong{color:var(--text);}
+    .share-link{font-family:'DM Mono',monospace;font-size:10px;padding:5px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--text);transition:all 0.15s;display:flex;align-items:center;gap:5px;}
+    .share-link:hover{border-color:var(--green);color:var(--green);}
+    .share-link.primary{background:var(--green);color:#000;border-color:var(--green);font-weight:600;}
+    .share-link.primary:hover{background:#00ffb0;}
+    /* Toast */
+    .toast{position:fixed;bottom:70px;right:24px;z-index:500;background:var(--surface2);border:1px solid rgba(0,229,160,0.4);color:var(--green);font-size:10px;letter-spacing:0.5px;padding:8px 16px;border-radius:8px;transform:translateY(16px) scale(0.96);opacity:0;transition:all 0.22s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+    .toast.show{transform:translateY(0) scale(1);opacity:1;}
+    footer{position:relative;z-index:1;text-align:center;padding:20px;padding-bottom:70px;color:var(--muted);font-size:10px;border-top:1px solid var(--border);}
+    footer a{color:var(--green);text-decoration:none;}
+    .empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);font-size:12px;}
+    @media(max-width:640px){
+      nav{padding:0 16px;}
+      .hero{padding:80px 16px 32px;}
+      .grid{grid-template-columns:1fr;padding:0 16px 100px;}
+      .tabs{padding:0 16px;}
+      .stats{margin:0 16px 24px;}
+      .modal,.panel-box{border-radius:12px 12px 0 0;max-height:92vh;}
+      .overlay,.panel-overlay{align-items:flex-end;padding:0;}
+      .share-bar{flex-wrap:wrap;gap:8px;padding:10px 16px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════ AUTH ══════ -->
+<div id="auth-screen">
+  <div class="auth-bg-grid"></div>
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⌘</div>
+      <div class="auth-logo-name">file<span>cmd</span></div>
+      <div class="auth-logo-sub">ORGANIZADOR DE COMANDOS</div>
+    </div>
+    <div id="auth-form">
+      <div class="auth-label">Como podemos te chamar?</div>
+      <div class="auth-field">
+        <span class="auth-field-icon">◎</span>
+        <input class="auth-input" id="inp-name" type="text" placeholder="Digite seu nome..." maxlength="40" autocomplete="off"/>
+      </div>
+      <div class="auth-error" id="auth-error"></div>
+      <button class="auth-btn" id="auth-submit-btn" onclick="handleAuth()">
+        <span id="btn-text">→ Entrar no filecmd</span>
+      </button>
+    </div>
+    <div id="auth-success" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:44px;color:var(--green);animation:checkPop 0.4s ease">✓</div>
+      <div style="color:var(--green);font-size:13px;margin-top:12px">Bem-vindo!</div>
+      <div style="color:var(--muted);font-size:10px;margin-top:4px">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ APP ══════ -->
+<div id="app">
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <nav>
+    <a class="nav-logo" href="#" onclick="scrollToTop()">file<span class="nav-logo-dot">cmd</span></a>
+    <span class="nav-pill">BETA</span>
+    <div class="nav-right">
+      <div style="position:relative">
+        <button class="user-avatar-btn" id="user-btn" onclick="toggleDropdown()">
+          <div class="avatar-circle" id="avatar-initials">??</div>
+          <span class="avatar-name" id="avatar-name">Usuário</span>
+          <span class="avatar-caret">▾</span>
+        </button>
+        <div class="user-dropdown" id="user-dropdown" style="display:none">
+          <div class="user-dropdown-header">
+            <div class="user-dropdown-name" id="dd-name"></div>
+            <div class="user-dropdown-email" id="dd-email"></div>
+          </div>
+          <button class="dropdown-item" onclick="closeDropdown();openPanel('profile')">◎ &nbsp;Perfil</button>
+          <button class="dropdown-item" onclick="closeDropdown();openPanel('settings')">⚙ &nbsp;Configurações</button>
+          <button class="dropdown-item" onclick="closeDropdown();openPanel('favorites')">★ &nbsp;Favoritos</button>
+          <button class="dropdown-item" onclick="closeDropdown();openPanel('history')">◈ &nbsp;Histórico de cópias</button>
+          <button class="dropdown-item" id="admin-item" onclick="openAdmin()" style="display:none;color:#00e5a0">🗄️ &nbsp;Banco de Dados</button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item danger" onclick="logout()">⇐ &nbsp;Sair da conta</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge"><span class="hero-dot"></span>REFERÊNCIA INTERATIVA</div>
+    <h1>filecmd — <em>organizador</em><br/>de <em>comandos</em></h1>
+    <p>52 comandos de terminal com flags detalhadas e exemplos prontos para copiar.</p>
+    <div class="search-wrap">
+      <div class="search-box">
+        <span style="color:var(--muted);font-size:13px">⌕</span>
+        <input type="text" id="searchInput" placeholder="buscar comando..." oninput="doSearch(this.value)" autocomplete="off" spellcheck="false"/>
+        <span class="search-count" id="searchCount">52 comandos</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-n" style="color:var(--green)">52</div><div class="stat-l">COMANDOS</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--blue)">6</div><div class="stat-l">CATEGORIAS</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--purple)">180+</div><div class="stat-l">EXEMPLOS</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--orange)">1</div><div class="stat-l">CLIQUE PRA COPIAR</div></div>
+  </div>
+
+  <div class="tabs" id="tabs-bar">
+    <button class="tab active" data-cat="all"  onclick="filterCat('all',this)"  style="color:var(--green);border-color:rgba(0,229,160,0.35);background:rgba(0,229,160,0.07)">● Todos</button>
+    <button class="tab" data-cat="file" onclick="filterCat('file',this)">📁 Arquivos</button>
+    <button class="tab" data-cat="url"  onclick="filterCat('url',this)">🌐 URL / HTTP</button>
+    <button class="tab" data-cat="net"  onclick="filterCat('net',this)">📡 Rede</button>
+    <button class="tab" data-cat="sys"  onclick="filterCat('sys',this)">⚙️ Sistema</button>
+    <button class="tab" data-cat="text" onclick="filterCat('text',this)">📝 Texto</button>
+    <button class="tab" data-cat="perm" onclick="filterCat('perm',this)">🔒 Permissões</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="overlay" id="overlay" onclick="closeOverlay(event)">
+    <div class="modal" id="modal">
+      <div class="modal-head">
+        <div class="modal-icon-wrap" id="mIconWrap"><span id="mIcon"></span></div>
+        <div><div class="modal-title" id="mTitle"></div><div class="modal-sub" id="mSub"></div></div>
+        <div class="modal-actions">
+          <button class="modal-fav-btn" id="modal-fav-btn" onclick="toggleFavFromModal()">☆ Favoritar</button>
+          <button class="modal-x" onclick="closeModal()">✕</button>
+        </div>
+      </div>
+      <div class="modal-body" id="mBody"></div>
+    </div>
+  </div>
+
+  <div class="share-bar">
+    <span>Gostou? <strong>Compartilhe com sua equipe</strong></span>
+    <button class="share-link" onclick="copyUrl()">🔗 Copiar link</button>
+    <button class="share-link" onclick="shareWhatsapp()">💬 WhatsApp</button>
+    <button class="share-link primary" onclick="shareUrl()">⇗ Compartilhar</button>
+  </div>
+
+  <div class="toast" id="toast"><span>✓</span><span id="toastMsg">Copiado!</span></div>
+  <footer>filecmd — <a href="#">organizador de comandos</a> · feito para devs · clique em qualquer exemplo para copiar</footer>
+</div>
+
+<script>
+// ══════ DB ══════
+const DB={
+  _k:'filecmd_db',_sk:'filecmd_session',
+  load(){try{return JSON.parse(localStorage.getItem(this._k))||{users:[],stats:{totalLogins:0,totalRegistros:0}};}catch(e){return{users:[],stats:{totalLogins:0,totalRegistros:0}};}},
+  save(d){localStorage.setItem(this._k,JSON.stringify(d));},
+  registerUser(name,email,password){
+    const db=this.load();
+    if(db.users.find(u=>u.email.toLowerCase()===email.toLowerCase()))return{ok:false,msg:'E-mail já cadastrado. Faça login.'};
+    const user={id:'u_'+Date.now(),name,email,passwordHash:btoa(password),createdAt:new Date().toISOString(),lastLogin:new Date().toISOString(),loginCount:1,role:db.users.length===0?'admin':'user',favorites:[],copyHistory:[]};
+    db.users.push(user);db.stats.totalRegistros++;db.stats.totalLogins++;this.save(db);return{ok:true,user};
+  },
+  loginUser(email,password){
+    const db=this.load();
+    const user=db.users.find(u=>u.email.toLowerCase()===email.toLowerCase());
+    if(!user)return{ok:false,msg:'E-mail não encontrado. Cadastre-se!'};
+    if(user.passwordHash!==btoa(password))return{ok:false,msg:'Senha incorreta.'};
+    user.lastLogin=new Date().toISOString();user.loginCount=(user.loginCount||0)+1;db.stats.totalLogins++;this.save(db);return{ok:true,user};
+  },
+  updateUser(uid,data){
+    const db=this.load();const i=db.users.findIndex(u=>u.id===uid);
+    if(i<0)return;db.users[i]={...db.users[i],...data};this.save(db);return db.users[i];
+  },
+  getStats(){const db=this.load();return{total:db.users.length,admins:db.users.filter(u=>u.role==='admin').length,hoje:db.users.filter(u=>u.createdAt&&u.createdAt.startsWith(new Date().toISOString().slice(0,10))).length,totalLogins:db.stats.totalLogins||0};},
+  saveSession(u){sessionStorage.setItem(this._sk,JSON.stringify(u));},
+  loadSession(){try{return JSON.parse(sessionStorage.getItem(this._sk));}catch(e){return null;}},
+  clearSession(){sessionStorage.removeItem(this._sk);}
+};
+
+// ══════ SETTINGS ══════
+const SKEY='filecmd_settings';
+const DEF={accentColor:'#00e5a0',compactCards:false,showBadges:true,animationsOn:true,defaultCat:'all',historyLimit:50};
+function loadSettings(){try{return{...DEF,...JSON.parse(localStorage.getItem(SKEY))};}catch(e){return{...DEF};}}
+function saveSettings(s){localStorage.setItem(SKEY,JSON.stringify(s));applySettings(s);}
+function applySettings(s){document.documentElement.style.setProperty('--green',s.accentColor||'#00e5a0');}
+let settings=loadSettings();applySettings(settings);
+
+// ══════ AUTH ══════
+let currentUser=null;
+(function(){const s=DB.loadSession();if(s){currentUser=s;showApp();}})();
+
+function showError(msg){const e=document.getElementById('auth-error');e.textContent='⚠ '+msg;e.classList.add('show');}
+function hideError(){document.getElementById('auth-error').classList.remove('show');}
+
+function handleAuth(){
+  hideError();
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name) return showError('Digite seu nome para continuar.');
+  if(name.length<2) return showError('Nome muito curto.');
+  const btn=document.getElementById('auth-submit-btn');
+  btn.disabled=true;
+  document.getElementById('btn-text').innerHTML='<span style="display:inline-block;width:12px;height:12px;border:2px solid rgba(0,0,0,0.2);border-top-color:#000;border-radius:50%;animation:spin 0.7s linear infinite"></span> entrando...';
+  setTimeout(()=>{
+    // Verifica se já existe usuário com esse nome, senão cria
+    const db=DB.load();
+    let user=db.users.find(u=>u.name.toLowerCase()===name.toLowerCase());
+    if(!user){
+      user={id:'u_'+Date.now(),name,email:'',passwordHash:'',createdAt:new Date().toISOString(),lastLogin:new Date().toISOString(),loginCount:1,role:db.users.length===0?'admin':'user',favorites:[],copyHistory:[]};
+      db.users.push(user);db.stats.totalRegistros++;
+    } else {
+      user.lastLogin=new Date().toISOString();
+      user.loginCount=(user.loginCount||0)+1;
+      const idx=db.users.findIndex(u=>u.id===user.id);
+      if(idx>=0)db.users[idx]=user;
+    }
+    db.stats.totalLogins++;DB.save(db);
+    DB.saveSession(user);
+    currentUser=user;
+    document.getElementById('auth-form').style.display='none';
+    document.getElementById('auth-success').style.display='block';
+    setTimeout(()=>showApp(),1000);
+  },700);
+}
+
+function showApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  if(currentUser){
+    const ini=(currentUser.name||'??').slice(0,2).toUpperCase();
+    document.getElementById('avatar-initials').textContent=ini;
+    document.getElementById('avatar-name').textContent=currentUser.name;
+    document.getElementById('dd-name').textContent=currentUser.name;
+    document.getElementById('dd-email').textContent=currentUser.role==='admin'?'👑 Admin':'👤 Usuário';
+    const ai=document.getElementById('admin-item');
+    if(ai)ai.style.display=currentUser.role==='admin'?'flex':'none';
+  }
+  render();
+}
+
+function logout(){
+  DB.clearSession();currentUser=null;closeDropdown();
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-form').style.display='block';
+  document.getElementById('auth-success').style.display='none';
+  document.getElementById('inp-name').value='';
+  const btn=document.getElementById('auth-submit-btn');
+  btn.disabled=false;
+  document.getElementById('btn-text').textContent='→ Entrar no filecmd';
+  hideError();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')handleAuth();});
+function toggleDropdown(){const d=document.getElementById('user-dropdown');d.style.display=d.style.display==='none'?'block':'none';}
+function closeDropdown(){document.getElementById('user-dropdown').style.display='none';}
+document.addEventListener('click',e=>{const b=document.getElementById('user-btn'),d=document.getElementById('user-dropdown');if(b&&d&&!b.contains(e.target)&&!d.contains(e.target))d.style.display='none';});
+
+// ══════ FAVORITES & HISTORY ══════
+function getFavorites(){return(currentUser&&currentUser.favorites)||[];}
+function isFav(id){return getFavorites().includes(id);}
+function toggleFav(id){
+  if(!currentUser)return false;
+  const favs=[...getFavorites()];const idx=favs.indexOf(id);
+  if(idx>=0)favs.splice(idx,1);else favs.unshift(id);
+  currentUser.favorites=favs;DB.updateUser(currentUser.id,{favorites:favs});DB.saveSession(currentUser);
+  return idx<0;
+}
+function addToHistory(text){
+  if(!currentUser)return;
+  let hist=[...(currentUser.copyHistory||[])].filter(h=>h.text!==text);
+  hist.unshift({text,time:new Date().toISOString()});
+  hist=hist.slice(0,settings.historyLimit||50);
+  currentUser.copyHistory=hist;DB.updateUser(currentUser.id,{copyHistory:hist});DB.saveSession(currentUser);
+}
+
+// ══════ PANELS ══════
+function openPanel(type){closeDropdown();renderPanel(type);}
+function closePanel(){const p=document.getElementById('panel-overlay');if(p)p.remove();}
+function renderPanel(type){
+  closePanel();
+  const ov=document.createElement('div');
+  ov.id='panel-overlay';ov.className='panel-overlay';
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  let html='';
+  if(type==='profile')html=buildProfile();
+  else if(type==='settings')html=buildSettings();
+  else if(type==='favorites')html=buildFavorites();
+  else if(type==='history')html=buildHistory();
+  const box=document.createElement('div');box.className='panel-box';box.innerHTML=html;
+  ov.appendChild(box);document.body.appendChild(ov);
+}
+
+// ── Profile ──
+function buildProfile(){
+  const u=currentUser;if(!u)return'';
+  const ini=(u.name||'??').slice(0,2).toUpperCase();
+  const created=u.createdAt?new Date(u.createdAt).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'—';
+  const lastLogin=u.lastLogin?new Date(u.lastLogin).toLocaleString('pt-BR'):'—';
+  const favCount=(u.favorites||[]).length,histCount=(u.copyHistory||[]).length;
+  const rc=u.role==='admin'?'rgba(0,229,160,0.15)':'rgba(56,189,248,0.1)';
+  const rt=u.role==='admin'?'#00e5a0':'#38bdf8';
+  return`<div class="panel-head"><span class="panel-icon">◎</span><div><div class="panel-title">Meu Perfil</div><div class="panel-sub">INFORMAÇÕES DA CONTA</div></div><button class="panel-close" onclick="closePanel()">✕</button></div>
+  <div class="panel-body">
+    <div style="text-align:center;margin-bottom:20px">
+      <div class="profile-avatar">${ini}</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">${u.name}</div>
+      <div style="font-size:11px;color:var(--muted)">${u.email}</div>
+      <span style="display:inline-flex;margin-top:10px;padding:3px 12px;border-radius:20px;font-size:9px;letter-spacing:1px;background:${rc};color:${rt};border:1px solid ${rt}44">${u.role==='admin'?'👑 Admin':'👤 Usuário'}</span>
+    </div>
+    <div class="profile-stats">
+      <div class="pstat"><div class="pstat-n" style="color:var(--yellow)">${favCount}</div><div class="pstat-l">FAVORITOS</div></div>
+      <div class="pstat"><div class="pstat-n" style="color:var(--green)">${histCount}</div><div class="pstat-l">CÓPIAS</div></div>
+      <div class="pstat"><div class="pstat-n" style="color:var(--blue)">${u.loginCount||1}</div><div class="pstat-l">LOGINS</div></div>
+    </div>
+    <div class="panel-section" style="margin-top:20px">
+      <div class="panel-section-title">DADOS DA CONTA</div>
+      <div class="info-row"><span class="info-label">ID</span><span class="info-value" style="font-size:9px;color:var(--muted)">${u.id}</span></div>
+      <div class="info-row"><span class="info-label">Nome</span><span class="info-value">${u.name}</span></div>
+      <div class="info-row"><span class="info-label">E-mail</span><span class="info-value">${u.email}</span></div>
+      <div class="info-row"><span class="info-label">Função</span><span class="info-value">${u.role}</span></div>
+      <div class="info-row"><span class="info-label">Membro desde</span><span class="info-value">${created}</span></div>
+      <div class="info-row"><span class="info-label">Último acesso</span><span class="info-value">${lastLogin}</span></div>
+      <div class="info-row"><span class="info-label">Total de logins</span><span class="info-value">${u.loginCount||1}</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">AÇÕES RÁPIDAS</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="openPanel('favorites')" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fbbf24;font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">★ Favoritos (${favCount})</button>
+        <button onclick="openPanel('history')" style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);border-radius:8px;color:#38bdf8;font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">◈ Histórico (${histCount})</button>
+        <button onclick="openPanel('settings')" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">⚙ Configurações</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Settings ──
+function buildSettings(){
+  const s=loadSettings();
+  const accents=['#00e5a0','#38bdf8','#f472b6','#a78bfa','#fb923c','#fbbf24','#f87171'];
+  const dots=accents.map(c=>`<div class="accent-dot ${s.accentColor===c?'sel':''}" style="background:${c}" onclick="setAccent('${c}')" title="${c}"></div>`).join('');
+  return`<div class="panel-head"><span class="panel-icon">⚙</span><div><div class="panel-title">Configurações</div><div class="panel-sub">PERSONALIZAR FILECMD</div></div><button class="panel-close" onclick="closePanel()">✕</button></div>
+  <div class="panel-body">
+    <div class="panel-section">
+      <div class="panel-section-title">APARÊNCIA</div>
+      <div class="setting-row" style="border-bottom:none;padding-bottom:4px">
+        <div class="setting-info"><div class="setting-label">Cor de destaque</div><div class="setting-desc">Cor principal dos elementos</div></div>
+      </div>
+      <div class="accent-grid" id="accent-grid" style="margin-bottom:14px">${dots}</div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Cards compactos</div><div class="setting-desc">Reduz espaçamento dos cards</div></div>
+        <div class="toggle ${s.compactCards?'on':''}" id="tog-compact" onclick="toggleSetting('compactCards','tog-compact')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Mostrar badges</div><div class="setting-desc">Rótulos de categoria nos cards</div></div>
+        <div class="toggle ${s.showBadges?'on':''}" id="tog-badges" onclick="toggleSetting('showBadges','tog-badges')"></div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Animações</div><div class="setting-desc">Transições e efeitos visuais</div></div>
+        <div class="toggle ${s.animationsOn?'on':''}" id="tog-anim" onclick="toggleSetting('animationsOn','tog-anim')"></div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">COMPORTAMENTO</div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Categoria inicial</div><div class="setting-desc">Categoria ao abrir o app</div></div>
+        <select class="setting-select" onchange="setDefaultCat(this.value)">
+          <option value="all" ${s.defaultCat==='all'?'selected':''}>Todos</option>
+          <option value="file" ${s.defaultCat==='file'?'selected':''}>Arquivos</option>
+          <option value="url" ${s.defaultCat==='url'?'selected':''}>URL / HTTP</option>
+          <option value="net" ${s.defaultCat==='net'?'selected':''}>Rede</option>
+          <option value="sys" ${s.defaultCat==='sys'?'selected':''}>Sistema</option>
+          <option value="text" ${s.defaultCat==='text'?'selected':''}>Texto</option>
+          <option value="perm" ${s.defaultCat==='perm'?'selected':''}>Permissões</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Limite do histórico</div><div class="setting-desc">Máximo de entradas salvas</div></div>
+        <select class="setting-select" onchange="setHistLimit(this.value)">
+          <option value="20" ${s.historyLimit===20?'selected':''}>20 entradas</option>
+          <option value="50" ${s.historyLimit===50?'selected':''}>50 entradas</option>
+          <option value="100" ${s.historyLimit===100?'selected':''}>100 entradas</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">DADOS</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="clearHistory()" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;color:#f87171;font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">🗑 Limpar histórico</button>
+        <button onclick="clearFavoritesAll()" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:8px;color:#f87171;font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">🗑 Limpar favoritos</button>
+        <button onclick="exportDB()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:10px;cursor:pointer;padding:8px 14px;font-family:inherit">⬇ Exportar dados</button>
+      </div>
+    </div>
+  </div>`;
+}
+function setAccent(c){settings.accentColor=c;saveSettings(settings);document.querySelectorAll('.accent-dot').forEach(d=>{d.classList.toggle('sel',d.style.background===c);});showToast('🎨 Cor atualizada!');}
+function toggleSetting(key,id){settings[key]=!settings[key];saveSettings(settings);document.getElementById(id)?.classList.toggle('on',settings[key]);render();showToast('✓ Salvo!');}
+function setDefaultCat(v){settings.defaultCat=v;saveSettings(settings);showToast('✓ Categoria inicial salva!');}
+function setHistLimit(v){settings.historyLimit=parseInt(v);saveSettings(settings);showToast('✓ Limite atualizado!');}
+function clearHistory(){if(!currentUser)return;if(!confirm('Limpar todo o histórico?'))return;currentUser.copyHistory=[];DB.updateUser(currentUser.id,{copyHistory:[]});DB.saveSession(currentUser);showToast('🗑 Histórico limpo!');closePanel();openPanel('settings');}
+function clearFavoritesAll(){if(!currentUser)return;if(!confirm('Remover todos os favoritos?'))return;currentUser.favorites=[];DB.updateUser(currentUser.id,{favorites:[]});DB.saveSession(currentUser);render();showToast('🗑 Favoritos removidos!');closePanel();openPanel('settings');}
+
+// ── Favorites panel ──
+function buildFavorites(){
+  const favIds=getFavorites();
+  const favCmds=D.filter(d=>favIds.includes(d.id));
+  const items=favCmds.length?favCmds.map(d=>`
+    <div class="fav-card" onclick="closePanel();openModal('${d.id}')">
+      <div class="fav-icon" style="background:${d.color}18;border:1px solid ${d.color}30;color:${d.color}">${d.icon}</div>
+      <div><div style="font-size:12px;color:#fff;font-weight:500">${d.label}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${d.sub}</div></div>
+      <button class="fav-rm" onclick="event.stopPropagation();removeFav('${d.id}')">✕</button>
+    </div>`).join('')
+    :`<div class="empty-state"><div class="empty-state-icon">☆</div>Nenhum favorito ainda.<br/><span style="font-size:10px">Clique em ☆ em qualquer comando.</span></div>`;
+  return`<div class="panel-head"><span class="panel-icon">★</span><div><div class="panel-title">Favoritos</div><div class="panel-sub">${favCmds.length} COMANDO(S) SALVOS</div></div><button class="panel-close" onclick="closePanel()">✕</button></div><div class="panel-body">${items}</div>`;
+}
+function removeFav(id){toggleFav(id);render();closePanel();openPanel('favorites');}
+
+// ── History panel ──
+function buildHistory(){
+  const hist=(currentUser&&currentUser.copyHistory)||[];
+  const items=hist.length?hist.map((h,i)=>`
+    <div class="hist-item">
+      <span style="font-size:9px;color:var(--muted);min-width:18px">${i+1}</span>
+      <span class="hist-code">${h.text}</span>
+      <span class="hist-time">${timeAgo(h.time)}</span>
+      <button class="hist-copy-btn" onclick="copyFromHistory(this,${JSON.stringify(h.text)})">⎘</button>
+    </div>`).join('')
+    :`<div class="empty-state"><div class="empty-state-icon">◈</div>Nenhuma cópia ainda.<br/><span style="font-size:10px">Seu histórico aparece aqui.</span></div>`;
+  return`<div class="panel-head"><span class="panel-icon">◈</span><div><div class="panel-title">Histórico de Cópias</div><div class="panel-sub">${hist.length} ENTRADA(S)</div></div><button class="panel-close" onclick="closePanel()">✕</button></div>
+  <div class="panel-body">
+    ${hist.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="clearHistory()" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;color:#f87171;font-size:9px;cursor:pointer;padding:5px 12px;font-family:inherit">🗑 Limpar tudo</button></div>`:''}
+    ${items}
+  </div>`;
+}
+function copyFromHistory(btn,text){navigator.clipboard.writeText(text).then(()=>{showToast('Copiado!');btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',1200);});}
+function timeAgo(iso){const d=(Date.now()-new Date(iso).getTime())/1000;if(d<60)return'agora';if(d<3600)return Math.floor(d/60)+'min';if(d<86400)return Math.floor(d/3600)+'h';return Math.floor(d/86400)+'d';}
+
+// ── Admin ──
+function openAdmin(){
+  closeDropdown();
+  if(!currentUser||currentUser.role!=='admin'){showToast('⛔ Acesso restrito');return;}
+  const users=DB.load().users,stats=DB.getStats();
+  const rows=users.map(u=>`<tr style="border-bottom:1px solid #1a1a2e"><td style="padding:8px 10px;color:#fff;font-size:10px">${u.name}</td><td style="padding:8px 10px;color:#888;font-size:10px">${u.email}</td><td style="padding:8px 10px"><span style="padding:2px 7px;border-radius:10px;font-size:8px;background:${u.role==='admin'?'rgba(0,229,160,0.15)':'rgba(56,189,248,0.1)'};color:${u.role==='admin'?'#00e5a0':'#38bdf8'}">${u.role}</span></td><td style="padding:8px 10px;color:#555;font-size:9px">${new Date(u.createdAt).toLocaleString('pt-BR')}</td><td style="padding:8px 10px;color:#fbbf24;font-size:10px;text-align:center">${u.loginCount||1}</td></tr>`).join('');
+  closePanel();
+  const ov=document.createElement('div');ov.id='panel-overlay';ov.className='panel-overlay';
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  ov.innerHTML=`<div class="panel-box wide"><div class="panel-head"><span class="panel-icon">🗄️</span><div><div class="panel-title">Banco de Dados</div><div class="panel-sub">filecmd_db · ${users.length} usuário(s) · ADMIN</div></div><button class="panel-close" onclick="document.getElementById('panel-overlay').remove()">✕</button></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#161d2c;border-bottom:1px solid #161d2c">${[['👥 Total',stats.total,'#00e5a0'],['👑 Admins',stats.admins,'#fbbf24'],['📅 Hoje',stats.hoje,'#38bdf8'],['🔑 Logins',stats.totalLogins,'#a78bfa']].map(([l,v,c])=>`<div style="background:#0d0d1a;padding:16px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#475569;margin-top:3px">${l}</div></div>`).join('')}</div>
+  <div style="padding:16px 22px">${users.length===0?'<div style="text-align:center;padding:40px;color:#475569">Nenhum usuário ainda.</div>':`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#111520">${['Nome','E-mail','Role','Cadastro','Logins'].map(h=>`<th style="padding:8px 10px;text-align:left;font-size:8px;color:#475569;letter-spacing:1.5px;text-transform:uppercase">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`}
+  <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end"><button onclick="exportDB()" style="background:#111520;border:1px solid #1e2840;border-radius:6px;color:#888;font-size:10px;cursor:pointer;padding:6px 14px;font-family:inherit">⬇ Exportar JSON</button><button onclick="if(confirm('Apagar todos os usuários?')){localStorage.removeItem('filecmd_db');document.getElementById('panel-overlay').remove();showToast('🗑 Banco apagado');}" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:6px;color:#f87171;font-size:10px;cursor:pointer;padding:6px 14px;font-family:inherit">🗑 Limpar DB</button></div></div></div>`;
+  document.body.appendChild(ov);
+}
+function exportDB(){const blob=new Blob([JSON.stringify(DB.load(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='filecmd_users_'+new Date().toISOString().slice(0,10)+'.json';a.click();showToast('📦 Exportado!');}
+
+// ══════ COMMANDS DATA ══════
+const D=[
+  {id:'ls',cat:'file',color:'#00e5a0',icon:'◈',label:'ls',sub:'Listar conteúdo',badge:'NAVEGAR',desc:'Lista arquivos e diretórios.',usage:'ls [opções] [diretório]',flags:[{f:'-l',d:'Formato longo'},{f:'-a',d:'Arquivos ocultos'},{f:'-h',d:'Tamanhos legíveis'},{f:'-R',d:'Recursivo'},{f:'-t',d:'Por data'},{f:'-S',d:'Por tamanho'}],cmds:[{n:'ls -la',d:'Detalhes + ocultos'},{n:'ls -lhS',d:'Por tamanho'},{n:'ls -lt',d:'Por data'},{n:'ls -R .',d:'Recursivo'}],examples:['ls -la','ls -lhS /var/log','ls -lt --color=auto','ls -1 | wc -l']},
+  {id:'cp',cat:'file',color:'#a78bfa',icon:'⊕',label:'cp',sub:'Copiar arquivos',badge:'GERENCIAR',desc:'Copia arquivos e diretórios.',usage:'cp [opções] origem destino',flags:[{f:'-r',d:'Recursivo'},{f:'-p',d:'Preserva atributos'},{f:'-i',d:'Pergunta antes'},{f:'-u',d:'Só se mais novo'},{f:'-v',d:'Verbose'}],cmds:[{n:'cp -r pasta/ /dest/',d:'Copia diretório'},{n:'cp -pv f.txt bak/',d:'Preserva atributos'},{n:'cp -u *.log /arq/',d:'Sync novos'}],examples:['cp arquivo.txt /tmp/','cp -r src/ /backup/src/','cp -pv *.conf /etc/']},
+  {id:'mv',cat:'file',color:'#f472b6',icon:'⇄',label:'mv',sub:'Mover / Renomear',badge:'GERENCIAR',desc:'Move ou renomeia.',usage:'mv [opções] origem destino',flags:[{f:'-i',d:'Pergunta antes'},{f:'-n',d:'Nunca sobrescreve'},{f:'-u',d:'Só se mais novo'},{f:'-v',d:'Verbose'}],cmds:[{n:'mv old.txt new.txt',d:'Renomeia'},{n:'mv pasta/ /dest/',d:'Move'},{n:'mv -v *.jpg fotos/',d:'Verbose'}],examples:['mv arquivo.txt novo.txt','mv -v *.jpg /fotos/','mv dir1/ /home/user/dir1/']},
+  {id:'rm',cat:'file',color:'#f87171',icon:'✕',label:'rm',sub:'Remover — ⚠️ irreversível',badge:'DANGER',desc:'Remove permanentemente!',usage:'rm [opções] arquivo',flags:[{f:'-r',d:'Recursivo'},{f:'-f',d:'Força'},{f:'-i',d:'Pergunta antes'},{f:'-v',d:'Verbose'}],cmds:[{n:'rm arquivo.txt',d:'Remove arquivo'},{n:'rm -ri pasta/',d:'Com confirmação'},{n:'rm -f *.tmp',d:'Remove temporários'}],examples:['rm arquivo.txt','rm -ri minha_pasta/','rm -f /tmp/*.tmp']},
+  {id:'mkdir',cat:'file',color:'#fb923c',icon:'+',label:'mkdir',sub:'Criar diretório',badge:'CRIAR',desc:'Cria diretórios.',usage:'mkdir [opções] nome',flags:[{f:'-p',d:'Cria hierarquia'},{f:'-v',d:'Verbose'},{f:'-m',d:'Permissões'}],cmds:[{n:'mkdir -p a/b/c',d:'Hierarquia completa'},{n:'mkdir -m 700 priv',d:'Acesso restrito'},{n:'mkdir -pv logs/2024',d:'Com verbose'}],examples:['mkdir projeto','mkdir -p src/components/ui','mkdir -m 755 public']},
+  {id:'find',cat:'file',color:'#fbbf24',icon:'◉',label:'find',sub:'Buscar arquivos',badge:'BUSCAR',desc:'Busca avançada.',usage:'find [caminho] [expressão]',flags:[{f:'-name',d:'Por nome'},{f:'-type f|d|l',d:'Tipo'},{f:'-size +1M',d:'>1MB'},{f:'-mtime -7',d:'Últimos 7 dias'},{f:'-exec',d:'Executa comando'},{f:'-delete',d:'Deleta resultados'}],cmds:[{n:'find . -name "*.log"',d:'Todos os .log'},{n:'find /tmp -mtime +7 -delete',d:'Remove velhos'},{n:'find . -size +10M',d:'>10MB'}],examples:['find . -name "*.txt"','find /var -type f -size +50M','find . -name "*.tmp" -delete']},
+  {id:'tar',cat:'file',color:'#a78bfa',icon:'▣',label:'tar',sub:'Arquivar / Compactar',badge:'COMPRIMIR',desc:'Empacota e comprime.',usage:'tar [flags] arquivo.tar [arquivos]',flags:[{f:'-c',d:'Cria'},{f:'-x',d:'Extrai'},{f:'-z',d:'gzip'},{f:'-j',d:'bzip2'},{f:'-v',d:'Verbose'},{f:'-f',d:'Nome do arquivo'}],cmds:[{n:'tar -czf bak.tar.gz pasta/',d:'Comprime gzip'},{n:'tar -xzf bak.tar.gz',d:'Extrai'},{n:'tar -tvf arq.tar',d:'Lista'}],examples:['tar -czf backup.tar.gz /pasta','tar -xzf arquivo.tar.gz -C /dest','tar -cjf arq.tar.bz2 src/']},
+  {id:'zip',cat:'file',color:'#38bdf8',icon:'◆',label:'zip / unzip',sub:'Comprimir .zip',badge:'COMPRIMIR',desc:'Cria e extrai .zip.',usage:'zip [opções] arquivo.zip [arquivos]',flags:[{f:'-r',d:'Recursivo'},{f:'-9',d:'Máx. compressão'},{f:'-e',d:'Criptografa'},{f:'-u',d:'Atualiza'}],cmds:[{n:'zip -r arq.zip pasta/',d:'Comprime'},{n:'unzip arq.zip -d /dest',d:'Extrai'},{n:'zip -9 -e priv.zip f.txt',d:'Criptografado'}],examples:['zip -r projeto.zip src/ docs/','unzip backup.zip -d /restore','zip -9 relatorio.zip *.pdf']},
+  {id:'stat',cat:'file',color:'#fbbf24',icon:'◫',label:'stat',sub:'Info do arquivo',badge:'INFO',desc:'Metadados do arquivo.',usage:'stat [opções] arquivo',flags:[{f:'-f',d:'Info do FS'},{f:'-c "%s"',d:'Tamanho'},{f:'-L',d:'Segue links'}],cmds:[{n:'stat arquivo.txt',d:'Info completa'},{n:'stat -f /dev/sda',d:'Info do FS'},{n:'stat -c "%n %s"',d:'Nome e tamanho'}],examples:['stat /etc/passwd','stat -c "%n: %s bytes" *.txt','stat -f /home']},
+  {id:'curl',cat:'url',color:'#38bdf8',icon:'⇗',label:'curl',sub:'Transferir via URL',badge:'HTTP',desc:'HTTP, HTTPS, FTP.',usage:'curl [opções] URL',flags:[{f:'-X METHOD',d:'GET/POST/PUT/DELETE'},{f:'-H "Header"',d:'Cabeçalho HTTP'},{f:'-d "body"',d:'Corpo da requisição'},{f:'-o arquivo',d:'Salva em arquivo'},{f:'-L',d:'Segue redirects'},{f:'-s',d:'Silencioso'},{f:'-v',d:'Verbose'}],cmds:[{n:'curl https://api.ex.com',d:'GET simples'},{n:'curl -X POST -d \'{"a":"b"}\' URL',d:'POST JSON'},{n:'curl -I https://site.com',d:'Só headers'}],examples:['curl https://api.exemplo.com/users','curl -X POST -H "Content-Type: application/json" -d \'{"nome":"João"}\' URL','curl -O https://exemplo.com/arquivo.zip','curl -I https://google.com']},
+  {id:'wget',cat:'url',color:'#00e5a0',icon:'⬇',label:'wget',sub:'Download de URLs',badge:'DOWNLOAD',desc:'Download recursivo.',usage:'wget [opções] URL',flags:[{f:'-O arquivo',d:'Salva em arquivo'},{f:'-c',d:'Continua pausado'},{f:'-r',d:'Recursivo'},{f:'--limit-rate=1M',d:'Limita velocidade'},{f:'-q',d:'Silencioso'},{f:'--mirror',d:'Mirror completo'}],cmds:[{n:'wget -c https://ex.com/f.zip',d:'Continua download'},{n:'wget -r -np https://site.com/',d:'Recursivo'},{n:'wget -O - https://api.ex.com | jq',d:'Pipe para jq'}],examples:['wget https://exemplo.com/arquivo.zip','wget -c https://exemplo.com/grande.iso','wget --mirror --convert-links https://site.com']},
+  {id:'httpie',cat:'url',color:'#f472b6',icon:'◈',label:'http (HTTPie)',sub:'HTTP humanizado',badge:'HTTP',desc:'Substituto moderno do curl.',usage:'http [opções] MÉTODO URL',flags:[{f:'GET|POST|PUT|DELETE',d:'Métodos'},{f:'key==val',d:'Query string'},{f:'key=val',d:'Campo JSON'},{f:'-v',d:'Verbose'}],cmds:[{n:'http GET https://api.ex.com',d:'GET simples'},{n:'http POST https://api.ex.com nome="João"',d:'POST JSON'},{n:'http DELETE https://api.ex.com/1',d:'DELETE'}],examples:['http GET https://api.exemplo.com/users','http POST https://api.ex.com nome="João" email="j@ex.com"']},
+  {id:'openssl_url',cat:'url',color:'#fbbf24',icon:'⚿',label:'openssl s_client',sub:'Inspecionar SSL/TLS',badge:'SSL',desc:'Testa certificados HTTPS.',usage:'openssl s_client -connect host:porta',flags:[{f:'-connect host:443',d:'Conecta'},{f:'-servername host',d:'SNI'},{f:'-showcerts',d:'Cadeia completa'}],cmds:[{n:'openssl s_client -connect google.com:443',d:'Testa SSL'},{n:'openssl s_client -connect host:443 -showcerts',d:'Cadeia'}],examples:['openssl s_client -connect google.com:443 < /dev/null']},
+  {id:'ping',cat:'net',color:'#00e5a0',icon:'◎',label:'ping',sub:'Testar conectividade',badge:'REDE',desc:'Pacotes ICMP.',usage:'ping [opções] host',flags:[{f:'-c N',d:'N pacotes'},{f:'-i N',d:'Intervalo'},{f:'-s N',d:'Tamanho'},{f:'-q',d:'Resumido'}],cmds:[{n:'ping -c 4 google.com',d:'4 pings'},{n:'ping -c 4 -i 0.5 host',d:'A cada 0.5s'}],examples:['ping -c 4 google.com','ping -c 10 -i 0.2 8.8.8.8']},
+  {id:'nmap',cat:'net',color:'#f87171',icon:'⌕',label:'nmap',sub:'Scanner de rede',badge:'SCANNER',desc:'Varredura de portas.',usage:'nmap [opções] alvo',flags:[{f:'-sV',d:'Versão dos serviços'},{f:'-p 80,443',d:'Portas específicas'},{f:'-p-',d:'Todas 65535'},{f:'-O',d:'SO'},{f:'-A',d:'Agressivo'},{f:'-T4',d:'Velocidade'}],cmds:[{n:'nmap -sV host',d:'Detecta serviços'},{n:'nmap -p 80,443 host',d:'Portas específicas'},{n:'nmap -p- --open host',d:'Todas abertas'}],examples:['nmap -sV 192.168.1.1','nmap -p 80,443,8080 exemplo.com','nmap -A -T4 192.168.1.0/24']},
+  {id:'ss',cat:'net',color:'#38bdf8',icon:'▤',label:'ss / netstat',sub:'Conexões de rede',badge:'REDE',desc:'Sockets e portas em escuta.',usage:'ss [opções]',flags:[{f:'-t',d:'TCP'},{f:'-u',d:'UDP'},{f:'-l',d:'Em escuta'},{f:'-n',d:'Numérico'},{f:'-p',d:'Processo'}],cmds:[{n:'ss -tlnp',d:'TCP em escuta + PID'},{n:'ss -an | grep :80',d:'Porta 80'},{n:'netstat -tulpn',d:'Equivalente'}],examples:['ss -tlnp','ss -an | grep ESTABLISHED','netstat -tulpn | grep :443']},
+  {id:'dig',cat:'net',color:'#fbbf24',icon:'◉',label:'dig / nslookup',sub:'Consultas DNS',badge:'DNS',desc:'Resolve nomes DNS.',usage:'dig [opções] nome [tipo]',flags:[{f:'A',d:'IPv4'},{f:'AAAA',d:'IPv6'},{f:'MX',d:'E-mail'},{f:'TXT',d:'SPF, DKIM'},{f:'NS',d:'Nameservers'},{f:'+short',d:'Resumido'}],cmds:[{n:'dig google.com A +short',d:'IPv4'},{n:'dig meusite.com MX',d:'Email servers'},{n:'dig @8.8.8.8 site.com',d:'Google DNS'}],examples:['dig google.com A +short','dig meusite.com MX','dig @1.1.1.1 exemplo.com NS']},
+  {id:'ssh',cat:'net',color:'#00e5a0',icon:'⇔',label:'ssh',sub:'Acesso remoto seguro',badge:'REMOTO',desc:'Conecta com criptografia.',usage:'ssh [opções] user@host',flags:[{f:'-p N',d:'Porta'},{f:'-i chave.pem',d:'Chave privada'},{f:'-L 8080:host:80',d:'Tunnel local'},{f:'-N',d:'Só tunnel'},{f:'-v',d:'Verbose'}],cmds:[{n:'ssh user@192.168.1.10',d:'Conecta'},{n:'ssh -i key.pem ubuntu@ec2',d:'Com chave'},{n:'ssh -L 5432:db:5432 user@host',d:'Tunnel DB'}],examples:['ssh admin@192.168.1.1','ssh -i ~/.ssh/key.pem ubuntu@ec2.amazonaws.com','ssh -L 3306:localhost:3306 user@servidor']},
+  {id:'scp',cat:'net',color:'#38bdf8',icon:'⊕',label:'scp / rsync',sub:'Transferir remotamente',badge:'REMOTO',desc:'Copia entre máquinas.',usage:'scp [opções] origem destino',flags:[{f:'-r',d:'Recursivo'},{f:'-P N',d:'Porta'},{f:'-i key.pem',d:'Chave'},{f:'-C',d:'Comprime'}],cmds:[{n:'scp arquivo.txt user@host:/tmp/',d:'Envia'},{n:'scp user@host:/log/app.log .',d:'Baixa'},{n:'rsync -avz src/ user@host:/dest/',d:'Sync'}],examples:['scp relatorio.pdf user@servidor:/home/','rsync -avz --progress src/ user@host:/app/']},
+  {id:'ps',cat:'sys',color:'#00e5a0',icon:'▦',label:'ps / top',sub:'Processos do sistema',badge:'SISTEMA',desc:'Lista processos.',usage:'ps [opções]',flags:[{f:'aux',d:'Todos os processos'},{f:'-ef',d:'Com PPID'},{f:'--sort=-%cpu',d:'Por CPU'},{f:'--sort=-%mem',d:'Por memória'}],cmds:[{n:'ps aux | grep nginx',d:'Acha nginx'},{n:'ps aux --sort=-%cpu | head',d:'Top CPU'},{n:'top -b -n 1',d:'Snapshot'}],examples:['ps aux | grep python','ps aux --sort=-%mem | head -10','top -b -n 1 | head -20']},
+  {id:'kill',cat:'sys',color:'#f87171',icon:'✕',label:'kill / killall',sub:'Encerrar processos',badge:'SISTEMA',desc:'Envia sinais.',usage:'kill [sinal] PID',flags:[{f:'-15',d:'SIGTERM — gracioso'},{f:'-9',d:'SIGKILL — forçado'},{f:'-1',d:'SIGHUP — recarrega'}],cmds:[{n:'kill -15 1234',d:'Encerra gracioso'},{n:'kill -9 1234',d:'Força'},{n:'killall nginx',d:'Todos nginx'}],examples:['kill -15 $(pgrep python)','kill -9 1234','killall -9 chrome']},
+  {id:'env',cat:'sys',color:'#a78bfa',icon:'◈',label:'env / export',sub:'Variáveis de ambiente',badge:'SISTEMA',desc:'Gerencia variáveis.',usage:'export VARIAVEL=valor',flags:[{f:'printenv',d:'Lista todas'},{f:'env',d:'Lista e executa'},{f:'unset VAR',d:'Remove'}],cmds:[{n:'export PATH="$PATH:/dir"',d:'Adiciona ao PATH'},{n:'export NODE_ENV=production',d:'Define ambiente'},{n:'printenv | grep PATH',d:'Filtra'}],examples:['export DATABASE_URL="postgres://user:pass@host/db"','printenv | sort','export PORT=3000 && node app.js']},
+  {id:'df',cat:'sys',color:'#00e5a0',icon:'▤',label:'df',sub:'Espaço em disco',badge:'INFO',desc:'Espaço disponível.',usage:'df [opções] [sistema]',flags:[{f:'-h',d:'Legível'},{f:'-T',d:'Tipo do FS'},{f:'-i',d:'Inodes'},{f:'--total',d:'Totais'}],cmds:[{n:'df -h',d:'Visão geral'},{n:'df -hT',d:'Com tipo'},{n:'df -h --total',d:'Com total'}],examples:['df -h','df -hT /dev/sda1','df -h --total']},
+  {id:'systemctl',cat:'sys',color:'#38bdf8',icon:'⚡',label:'systemctl',sub:'Gerenciar serviços',badge:'SISTEMA',desc:'Controla via systemd.',usage:'systemctl [comando] [serviço]',flags:[{f:'start',d:'Inicia'},{f:'stop',d:'Para'},{f:'restart',d:'Reinicia'},{f:'status',d:'Status'},{f:'enable',d:'Ativa boot'},{f:'disable',d:'Desativa boot'}],cmds:[{n:'systemctl status nginx',d:'Status'},{n:'systemctl restart nginx',d:'Reinicia'},{n:'systemctl enable --now nginx',d:'Ativa e inicia'}],examples:['systemctl status nginx','systemctl restart postgresql','systemctl enable --now docker']},
+  {id:'cron',cat:'sys',color:'#fbbf24',icon:'◎',label:'cron / crontab',sub:'Agendamento',badge:'SISTEMA',desc:'Agenda execução periódica.',usage:'crontab -e',flags:[{f:'-e',d:'Edita'},{f:'-l',d:'Lista'},{f:'-r',d:'Remove'}],cmds:[{n:'crontab -e',d:'Abre editor'},{n:'crontab -l',d:'Lista crons'},{n:'0 2 * * * /backup.sh',d:'2h todo dia'}],examples:['crontab -l','crontab -e','*/5 * * * * /monitorar.sh','0 0 * * 0 /backup_semanal.sh']},
+  {id:'grep',cat:'text',color:'#fbbf24',icon:'⌕',label:'grep',sub:'Buscar padrões',badge:'BUSCAR',desc:'Pesquisa com regex.',usage:'grep [opções] padrão [arquivo]',flags:[{f:'-i',d:'Case insensitive'},{f:'-r',d:'Recursivo'},{f:'-n',d:'Número da linha'},{f:'-v',d:'Inverte'},{f:'-c',d:'Conta'},{f:'-E',d:'Regex estendido'}],cmds:[{n:'grep -rn "TODO" src/',d:'Acha TODOs'},{n:'grep -i "erro" app.log',d:'Busca erros'},{n:'grep -E "^[0-9]+" data.txt',d:'Regex'}],examples:['grep -rn "TODO" src/','grep -i "error|warning" app.log','grep -v "^#" /etc/nginx.conf']},
+  {id:'sed',cat:'text',color:'#a78bfa',icon:'✏',label:'sed',sub:'Stream Editor',badge:'EDITAR',desc:'Substitui e transforma.',usage:"sed [opções] 'expressão' arquivo",flags:[{f:'-i',d:'In-place'},{f:'-n',d:'Suprime saída'},{f:'s/old/new/g',d:'Substitui todas'},{f:'/padrão/d',d:'Deleta linhas'}],cmds:[{n:"sed 's/http/https/g' f.txt",d:'Substitui'},{n:"sed -i 's/old/new/g' f.txt",d:'No arquivo'},{n:"sed '/^#/d' config.txt",d:'Remove comentários'}],examples:["sed 's/foo/bar/g' arquivo.txt","sed -i 's/localhost/prod/g' config.env","sed -n '10,20p' arquivo.txt"]},
+  {id:'awk',cat:'text',color:'#f472b6',icon:'▣',label:'awk',sub:'Processar colunas',badge:'PROCESSAR',desc:'Extrai dados tabulares.',usage:"awk 'programa' arquivo",flags:[{f:'-F ":"',d:'Separador'},{f:'$1, $2...',d:'Colunas'},{f:'NR',d:'Número linha'},{f:'BEGIN{}',d:'Antes'},{f:'END{}',d:'Depois'}],cmds:[{n:"awk '{print $1}' f.txt",d:'Coluna 1'},{n:"awk -F: '{print $1}' /etc/passwd",d:'Usuários'},{n:"awk '{sum+=$1} END{print sum}'",d:'Soma'}],examples:["awk '{print $1, $3}' dados.txt","awk -F: '{print $1}' /etc/passwd","awk '{sum+=$2} END {print sum}' vendas.txt"]},
+  {id:'jq',cat:'text',color:'#a78bfa',icon:'{}',label:'jq',sub:'Processar JSON',badge:'JSON',desc:'Filtra e formata JSON.',usage:'jq [filtro] [arquivo]',flags:[{f:'.',d:'Formata'},{f:'.campo',d:'Acessa campo'},{f:'.[]',d:'Itera array'},{f:'select()',d:'Filtra'},{f:'-r',d:'Raw output'}],cmds:[{n:'curl -s api.ex.com | jq .',d:'Formata API'},{n:"jq '.[] | .nome' users.json",d:'Extrai campo'},{n:"jq 'select(.ativo)' f.json",d:'Filtra'}],examples:['curl -s https://api.ex.com/users | jq .',"jq '.[] | .name' users.json","jq '.data | length' response.json"]},
+  {id:'sort',cat:'text',color:'#fb923c',icon:'⇅',label:'sort / uniq',sub:'Ordenar e deduplicar',badge:'PROCESSAR',desc:'Ordena e remove duplicatas.',usage:'sort [opções] arquivo',flags:[{f:'-r',d:'Reverso'},{f:'-n',d:'Numérico'},{f:'-k N',d:'Coluna N'},{f:'-u',d:'Unique'},{f:'-h',d:'Tamanhos'}],cmds:[{n:'sort -rn numeros.txt',d:'Numérico desc.'},{n:'sort | uniq -c | sort -rn',d:'Por frequência'},{n:'sort -t, -k2 dados.csv',d:'CSV col.2'}],examples:['sort -rn valores.txt','cat log.txt | grep ERROR | sort | uniq -c | sort -rn']},
+  {id:'wc',cat:'text',color:'#38bdf8',icon:'#',label:'wc',sub:'Contar linhas/palavras',badge:'CONTAR',desc:'Conta linhas, palavras e bytes.',usage:'wc [opções] arquivo',flags:[{f:'-l',d:'Linhas'},{f:'-w',d:'Palavras'},{f:'-c',d:'Bytes'},{f:'-m',d:'Caracteres unicode'}],cmds:[{n:'wc -l arquivo.txt',d:'Linhas'},{n:'ls | wc -l',d:'Qtd arquivos'},{n:'grep ERR log.txt | wc -l',d:'Conta erros'}],examples:['wc -l /etc/passwd','ls -1 | wc -l','grep -r "def " src/ | wc -l']},
+  {id:'chmod',cat:'perm',color:'#fb923c',icon:'⚿',label:'chmod',sub:'Alterar permissões',badge:'PERMISSÕES',desc:'Leitura, escrita e execução.',usage:'chmod [opções] modo arquivo',flags:[{f:'-R',d:'Recursivo'},{f:'u/g/o/a',d:'Usuário/Grupo/Outros/Todos'},{f:'+/-/=',d:'Adiciona/Remove/Define'},{f:'r/w/x',d:'Leitura/Escrita/Execução'}],cmds:[{n:'chmod 755 script.sh',d:'rwxr-xr-x'},{n:'chmod -R 644 *.txt',d:'Recursivo'},{n:'chmod u+x programa',d:'Adiciona execução'}],examples:['chmod 755 deploy.sh','chmod -R 644 /var/www/html','chmod 600 ~/.ssh/id_rsa']},
+  {id:'chown',cat:'perm',color:'#f472b6',icon:'☉',label:'chown',sub:'Alterar proprietário',badge:'PERMISSÕES',desc:'Muda dono e grupo.',usage:'chown [opções] user[:grupo] arquivo',flags:[{f:'-R',d:'Recursivo'},{f:'-v',d:'Verbose'},{f:'--from=u:g',d:'Condicional'}],cmds:[{n:'chown user:grupo f.txt',d:'Define dono'},{n:'chown -R www-data site/',d:'Webserver'},{n:'chown root:root conf',d:'Root'}],examples:['chown john:developers projeto/','chown -R www-data /var/www','chown root:root /etc/passwd']},
+];
+
+// ══════ APP LOGIC ══════
+let activeCat='all',activeSearch='',currentModalId=null;
+
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+
+function copy(text){navigator.clipboard.writeText(text).then(()=>{showToast('Copiado: '+text.slice(0,36)+(text.length>36?'…':''));addToHistory(text);});}
+
+function getItems(){
+  const q=activeSearch.toLowerCase();
+  return D.filter(d=>{const mc=activeCat==='all'||d.cat===activeCat;const ms=!q||d.label.toLowerCase().includes(q)||d.sub.toLowerCase().includes(q)||d.desc.toLowerCase().includes(q);return mc&&ms;});
+}
+
+function render(){
+  const items=getItems();
+  const grid=document.getElementById('grid');
+  document.getElementById('searchCount').textContent=items.length+' comando'+(items.length!==1?'s':'');
+  if(!items.length){grid.innerHTML='<div class="empty">Nenhum resultado para "<span style="color:#fff">'+activeSearch+'</span>"</div>';return;}
+  const compact=settings.compactCards,showBadges=settings.showBadges;
+  grid.innerHTML=items.map(d=>{
+    const fav=isFav(d.id);
+    return`<div class="card" style="--cc:${d.color}" onclick="openModal('${d.id}')">
+      <button class="card-fav ${fav?'active':''}" onclick="event.stopPropagation();toggleFavCard('${d.id}',this)" title="${fav?'Remover favorito':'Adicionar favorito'}">${fav?'★':'☆'}</button>
+      <div class="card-head">
+        <div class="card-icon" style="background:${d.color}18;border:1px solid ${d.color}30;color:${d.color}">${d.icon}</div>
+        <div><div class="card-title">${d.label}</div><div class="card-sub">${d.sub}</div></div>
+        ${showBadges?`<div class="card-badge" style="background:${d.color}14;color:${d.color};border:1px solid ${d.color}30">${d.badge}</div>`:''}
+      </div>
+      <div class="card-body" style="${compact?'padding:6px 14px':''}">
+        ${d.cmds.map(c=>`<div class="cmd-row" style="${compact?'padding:4px 0':''}">
+          <span class="cmd-name" style="color:${d.color}">${c.n.length>24?c.n.slice(0,24)+'…':c.n}</span>
+          <span class="cmd-desc">${c.d}</span>
+          <button class="cmd-copy" onclick="event.stopPropagation();copyCmd(this,${JSON.stringify(c.n)})">⎘</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleFavCard(id,btn){const added=toggleFav(id);btn.textContent=added?'★':'☆';btn.classList.toggle('active',added);showToast(added?'★ Adicionado aos favoritos':'☆ Removido dos favoritos');}
+
+function copyCmd(btn,text){navigator.clipboard.writeText(text).then(()=>{showToast('Copiado!');addToHistory(text);btn.textContent='✓';btn.classList.add('ok');setTimeout(()=>{btn.textContent='⎘';btn.classList.remove('ok');},1400);});}
+
+function filterCat(cat,btn){
+  activeCat=cat;
+  document.querySelectorAll('.tab').forEach(b=>{b.classList.remove('active');b.style.color='';b.style.borderColor='';b.style.background='';});
+  if(btn){
+    btn.classList.add('active');
+    const cc={all:'#00e5a0',file:'#00e5a0',url:'#38bdf8',net:'#00e5a0',sys:'#38bdf8',text:'#fbbf24',perm:'#fb923c'}[cat]||'#00e5a0';
+    btn.style.color=cc;btn.style.borderColor=cc+'55';btn.style.background=cc+'12';
+  }
+  render();
+}
+
+function doSearch(val){activeSearch=val;render();}
+
+function openModal(id){
+  const d=D.find(x=>x.id===id);if(!d)return;
+  currentModalId=id;
+  document.getElementById('mIconWrap').style.cssText=`background:${d.color}18;border:1px solid ${d.color}30;color:${d.color}`;
+  document.getElementById('mIcon').textContent=d.icon;
+  document.getElementById('mTitle').textContent=d.label;
+  document.getElementById('mSub').textContent=d.sub+' — '+d.desc;
+  document.getElementById('modal').style.setProperty('--cc',d.color);
+  const fav=isFav(id);
+  const fb=document.getElementById('modal-fav-btn');
+  fb.textContent=fav?'★ Favoritado':'☆ Favoritar';fb.className='modal-fav-btn'+(fav?' active':'');
+  document.getElementById('mBody').innerHTML=`
+    <div class="msec"><div class="msec-title">USO</div>
+      <div class="usage-box"><code>$ ${d.usage}</code><button class="usage-copy" onclick="copy(${JSON.stringify(d.usage)})">copiar</button></div></div>
+    <div class="msec"><div class="msec-title">FLAGS & OPÇÕES</div>
+      <div class="flags-table">${d.flags.map(f=>`<div class="flag-row"><span class="flag-k">${f.f}</span><span class="flag-v">${f.d}</span></div>`).join('')}</div></div>
+    <div class="msec"><div class="msec-title">EXEMPLOS — CLIQUE PARA COPIAR</div>
+      <div class="ex-list">${d.examples.map(ex=>`<div class="ex-row" onclick="copy(${JSON.stringify(ex)})"><span class="ex-dollar">$</span><code>${ex}</code><span class="ex-cp">⎘</span></div>`).join('')}</div></div>`;
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function toggleFavFromModal(){
+  if(!currentModalId)return;
+  const added=toggleFav(currentModalId);
+  const fb=document.getElementById('modal-fav-btn');
+  fb.textContent=added?'★ Favoritado':'☆ Favoritar';fb.className='modal-fav-btn'+(added?' active':'');
+  showToast(added?'★ Adicionado aos favoritos':'☆ Removido dos favoritos');
+  render();
+}
+
+function closeOverlay(e){if(e.target===document.getElementById('overlay'))closeModal();}
+function closeModal(){document.getElementById('overlay').classList.remove('open');document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closePanel();}});
+function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+
+const PAGE_URL=window.location.href,PAGE_TITLE='filecmd — Organizador de Comandos';
+function shareUrl(){if(navigator.share){navigator.share({title:PAGE_TITLE,text:'52 comandos de terminal prontos para copiar!',url:PAGE_URL});}else{copyUrl();}}
+function copyUrl(){navigator.clipboard.writeText(PAGE_URL).then(()=>showToast('🔗 Link copiado!'));}
+function shareWhatsapp(){window.open('https://wa.me/?text='+encodeURIComponent(PAGE_TITLE+' — '+PAGE_URL),'_blank');}
+</script>
+</body>
+</html>
